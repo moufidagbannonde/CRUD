@@ -1,65 +1,79 @@
 <template>
     <div>
-        <!--formulaire d'ajout ou de modification d'utilisateur-->
-        <button @click="add()" class="addbuton">{{ !isAdding ? "Add" : "Retour"}}</button>
+        <h1 title="Liste des utilisateurs">Lista de Usuários</h1>
+        <button @click="add()" class="botao" v-if="!ajout" title="Ajouter">Adicionar</button>
+
+        <div v-if="isLoading" class="spinner" title="Chargement...">Carregando...</div>
+
+        <!-- Notificações -->
+        <div v-if="notification.visible" :class="`notification ${notification.type}`" :title="notification.type === 'success' ? 'Succès' : 'Erreur'">
+            {{ notification.message }}
+        </div>
+
+        <!-- Mostrar a lista de usuários somente se showUsersList for verdadeiro -->
+        <div v-if="showUsersList">
+            <table>
+                <thead>
+                    <tr>
+                        <th title="Prénom">Primeiro Nome</th>
+                        <th title="Nom">Sobrenome</th>
+                        <th title="Email">Email</th>
+                        <th title="Âge">Idade</th>
+                        <th title="Pays">País</th>
+                        <th title="Actions">Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr v-for="user in users" :key="user.id">
+                        <td :title="`Prénom: ${user.firstName}`">{{ user.firstName }}</td>
+                        <td :title="`Nom: ${user.lastName}`">{{ user.lastName }}</td>
+                        <td :title="`Email: ${user.email}`">{{ user.email }}</td>
+                        <td :title="`Âge: ${user.age}`">{{ user.age }}</td>
+                        <td :title="`Pays: ${user.country}`">{{ user.country }}</td>
+                        <td class="btn">
+                            <button class="button-edit" @click="editUser(user)" title="Modifier">Modificar</button>
+                            <button class="button-delete" @click="removeUser(user.id)" title="Supprimer">Excluir</button>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Formulário de adicionar ou editar usuário -->
         <div v-if="isAdding">
-            <h2>{{ isEditing ? "Modifier un utilisateur" : "Ajouter un utilisateur" }}</h2>
+            <h2 :title="isEditing ? 'Modifier un utilisateur' : 'Ajouter un utilisateur'">
+                {{ isEditing ? "Modificar um usuário" : "Adicionar um usuário" }}
+            </h2>
             <form @submit.prevent="isEditing ? updateUser() : addUser()">
-                <input v-model="newUser.firstName" placeholder="Prénom" required />
-                <input v-model="newUser.lastName" placeholder="Nom" required />
-                <input v-model="newUser.email" placeholder="Email" required />
-                <input v-model="newUser.age" type="number" placeholder="Âge" required />
-                <select v-model="newUser.country" required>
-                    <option value="" disabled>Sélectionnez un pays</option>
-                    <option v-for="country in countries" :key="country" :value="country">{{ country }}</option>
+                <input v-model="newUser.firstName" placeholder="Primeiro Nome" required title="Prénom" />
+                <input v-model="newUser.lastName" placeholder="Sobrenome" required title="Nom" />
+                <input v-model="newUser.email" placeholder="Email" required title="Email" />
+                <input v-model="newUser.age" type="number" placeholder="Idade" required title="Âge" />
+                <select v-model="newUser.country" required title="Pays">
+                    <option value="" disabled>Selecione um país</option>
+                    <option v-for="country in countries" :key="country" :value="country" :title="`Pays: ${country}`">{{ country }}</option>
                 </select>
-                <button type="submit" :disabled="!isFormValid" class="submit">{{ isEditing ? "Mettre à jour" : "Ajouter" }}</button>
+                <button type="submit" :disabled="!isFormValid" class="submit" :title="isEditing ? 'Mettre à jour' : 'Ajouter'">
+                    {{ isEditing ? "Atualizar" : "Adicionar" }}
+                </button>
+                <button @click="goBack" class="botao-retorno" title="Retour">Voltar</button>
             </form>
         </div>
-        <!--liste des utilisateurs depuis le fichier users.json-->
-        <h1>Liste des utilisateurs</h1>
-        <table>
-            <thead>
-                <tr>
-                    <th>Prénom</th>
-                    <th>Nom</th>
-                    <th>Email</th>
-                    <th>Âge</th>
-                    <th>Pays</th>
-                    <th>Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr v-for="user in users" :key="user.id">
-                    <td>{{ user.firstName }}</td>
-                    <td>{{ user.lastName }}</td>
-                    <td>{{ user.email }}</td>
-                    <td>{{ user.age }}</td>
-                    <td>{{ user.country }}</td>
-                    <td class="btn">
-                        <button class="button-edit" @click="editUser(user)">Modifier</button>
-                        <button class="button-delete" @click="removeUser(user.id)">Supprimer</button>
-                    </td>
-                </tr>
-            </tbody>
-        </table>
-
     </div>
 </template>
 
 <script setup>
 import { ref, onMounted, computed } from 'vue';
 import axios from 'axios';
-import countries from '../util/countries'
+import countries from '../util/countries';
 
+const isLoading = ref(false);
+const ajout = ref(false);
+let showUsersList = ref(true);
 let isAdding = ref(false);
-
-const add = () => {
-    isAdding.value = !isAdding.value;
-}
 const users = ref([]);
 const newUser = ref({
-    id: null, // Pour stocker l'ID lors de la modification
+    id: null,
     firstName: '',
     lastName: '',
     email: '',
@@ -68,70 +82,106 @@ const newUser = ref({
 });
 const isEditing = ref(false);
 
-// Propriété calculée pour vérifier si le formulaire est valide
+// Notifications
+const notification = ref({
+    visible: false,
+    message: '',
+    type: '' // 'success' ou 'error'
+});
+
+const add = () => {
+    isAdding.value = true;
+    showUsersList.value = false;
+    ajout.value = true
+};
+
+const goBack = () => {
+    resetForm();
+    ajout.value = false
+};
 const isFormValid = computed(() => {
     return newUser.value.firstName && newUser.value.lastName && newUser.value.email && newUser.value.age && newUser.value.country;
 });
 
-
-// Fonction pour récupérer les utilisateurs
 const fetchUsers = async () => {
+    isLoading.value = true;
     try {
         const response = await axios.get('http://localhost:3000/api/users');
-        console.log("réponse de la requête d'obtention des users ", response);
-        users.value = response.data; // Assurez-vous d'accéder à 'data'
+        users.value = response.data;
+        showUsersList.value = true;
+        showNotification('success', 'Utilisateurs chargés avec succès !');
     } catch (error) {
         console.error("Erreur lors de la récupération des utilisateurs :", error);
+        showNotification('error', 'Erreur lors du chargement des utilisateurs.');
+    } finally {
+        isLoading.value = false;
     }
 };
 
-// Fonction pour ajouter un nouvel utilisateur
 const addUser = async () => {
+    isLoading.value = true;
     try {
         await axios.post('http://localhost:3000/api/users', newUser.value);
         resetForm();
-        fetchUsers(); // Récupérer la liste des utilisateurs
+        ajout.value = false
+        await fetchUsers();
+        showNotification('success', 'Utilisateur ajouté avec succès !');
     } catch (error) {
         console.error("Erreur lors de l'ajout de l'utilisateur :", error);
+        showNotification('error', 'Erreur lors de l\'ajout de l\'utilisateur.');
+    } finally {
+        isLoading.value = false;
     }
 };
 
-// Fonction pour supprimer un utilisateur
 const removeUser = async (id) => {
     try {
-        await axios.delete(`http://localhost:3000/api/users/${id}`); // Appel à l'API de suppression
-        fetchUsers(); // Récupérer la liste des utilisateurs
+        await axios.delete(`http://localhost:3000/api/users/${id}`);
+        await fetchUsers();
+        showNotification('success', 'Utilisateur supprimé avec succès !');
     } catch (error) {
         console.error("Erreur lors de la suppression de l'utilisateur :", error);
+        showNotification('error', 'Erreur lors de la suppression de l\'utilisateur.');
     }
 };
 
-// Fonction pour charger un utilisateur pour la modification
 const editUser = (user) => {
-    newUser.value = { ...user }; // Copier les données de l'utilisateur dans newUser
-    isEditing.value = true; // Passer en mode édition
+    newUser.value = { ...user };
+    isEditing.value = true;
+    isAdding.value = true;
+    showUsersList.value = false;
 };
 
-// Fonction pour mettre à jour un utilisateur
 const updateUser = async () => {
     try {
         await axios.put(`http://localhost:3000/api/users/${newUser.value.id}`, newUser.value);
         resetForm();
-        fetchUsers(); // Récupérer la liste des utilisateurs
+        await fetchUsers();
+        showNotification('success', 'Utilisateur mis à jour avec succès !');
     } catch (error) {
         console.error("Erreur lors de la mise à jour de l'utilisateur :", error);
+        showNotification('error', 'Erreur lors de la mise à jour de l\'utilisateur.');
     }
 };
 
-// Fonction pour réinitialiser le formulaire
 const resetForm = () => {
     newUser.value = { id: null, firstName: '', lastName: '', email: '', age: 0, country: '' };
-    isEditing.value = false; // Réinitialiser le mode d'édition
+    isEditing.value = false;
+    isAdding.value = false;
+    showUsersList.value = true;
 };
 
-// Récupérer les utilisateurs lors du montage du composant
+// Fonction pour afficher les notifications
+const showNotification = (type, message) => {
+    notification.value = { visible: true, type, message };
+    setTimeout(() => {
+        notification.value.visible = false; // Masquer la notification après 3 secondes
+    }, 3000);
+};
+
 onMounted(fetchUsers);
 </script>
+
 
 <style scoped>
 /* Style général */
@@ -145,9 +195,13 @@ body {
 
 .btn {
     display: flex;
+    justify-content: center; /* Centre le contenu horizontalement */
+    align-items: center; /* Centre le contenu verticalement */
+    gap: 5px; 
 }
 .btn button {
-    width: 90px;
+    width: 100px;
+    padding: 7px;
     text-align: center;
 }
 /* Titre principal */
@@ -211,7 +265,7 @@ tr:hover {
 }
 
 .button-edit {
-    background-color: #1e90ff; /* Bleu vif pour la modification */
+    background-color: #1c86ee; /* Bleu vif pour la modification */
     transition: background-color 0.3s, transform 0.2s;
 }
 
@@ -225,14 +279,32 @@ button {
     margin: 5px;
 }
 
+.botao {
+    width: 220px; /* Largeur légèrement augmentée */
+    background-color: #007BFF; /* Bleu vif */
+    color: white; /* Couleur du texte */
+    border: none; /* Pas de bordure */
+    border-radius: 8px; /* Coins arrondis */
+    padding: 12px 20px; /* Padding plus confortable */
+    font-size: 1.1rem; /* Taille de police légèrement augmentée */
+    cursor: pointer; /* Curseur pointer */
+    transition: background-color 0.3s, transform 0.2s; /* Transition pour les effets */
+    box-shadow: 0 4px 8px rgba(0, 123, 255, 0.2); /* Ombre légère */
+}
+
+.bouton:hover {
+    background-color: #0056b3; /* Couleur plus foncée au survol */
+    transform: translateY(-2px); /* Légère élévation au survol */
+}
 .button-delete:hover {
     background-color: #ff6b81; /* Une teinte plus claire pour le hover */
     transform: translateY(-2px);
 }
 
 .button-edit:hover {
-    background-color: #1c86ee; /* Une teinte plus claire pour le hover */
+    background-color: #23f3d78e; /* Une teinte plus claire pour le hover */
     transform: translateY(-2px);
+    color: black;
 }
 
 /* Formulaire */
@@ -245,7 +317,7 @@ form {
     margin: 0 auto;
 }
 
-form button , .addbuton{
+form button {
     width: 100%;
     margin-top: 15px;
     color: white; /* Couleur du texte */
@@ -284,4 +356,48 @@ input:focus, select:focus {
     outline: none;
     box-shadow: 0 0 8px rgba(0, 122, 204, 0.3);
 }
+
+/**spinner */
+.spinner {
+    text-align: center;
+    font-size: 1.5rem;
+    color: #007ACC;
+    margin-top: 20px;
+}
+
+/* Notifications */
+.notification {
+    padding: 10px;
+    margin: 20px 0;
+    border-radius: 5px;
+    text-align: center;
+}
+
+.notification.success {
+    background-color: #d4edda; /* Vert clair */
+    color: green; /* Texte vert foncé */
+}
+
+.notification.error {
+    background-color: #f8d7da; /* Rouge clair */
+    color: red; /* Texte rouge foncé */
+}
+/**bouton de retour */
+.bouton-retour {
+    background-color: #6c757d;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 8px 16px;
+    margin-bottom: 10px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+.bouton-retour:hover {
+    background-color: #5a6268;
+}
+
 </style>
+
+
