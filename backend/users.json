@@ -6,5 +6,29 @@
     "age": 26,
     "email": "kolomuani@gmail.fr",
     "country": "France"
+  },
+  {
+    "id": "1730195849826",
+    "firstName": "Parking",
+    "lastName": "Madeira",
+    "age": 19,
+    "email": "moufidteixeira@gmail.com",
+    "country": "rbrbrb"
+  },
+  {
+    "id": "1730198634473",
+    "firstName": "Parking",
+    "lastName": "Madeira",
+    "age": 135,
+    "email": "moufidteixeira@gmail.com",
+    "country": "Burkina Faso"
+  },
+  {
+    "id": "1730199468652",
+    "firstName": "Nafiou",
+    "lastName": "TINO",
+    "age": 669,
+    "email": "nafioutino@gmail.com",
+    "country": "Cuba"
   }
 ]

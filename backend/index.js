@@ -16,8 +16,10 @@ let users = [];
 // Charger les utilisateurs depuis le fichier JSON au démarrage
 const loadUsersFromFile = () => {
     if (fs.existsSync(dataFilePath)) {
-        const data = fs.readFileSync(dataFilePath);
-        users = JSON.parse(data);
+        const data = fs.readFileSync(dataFilePath, 'utf8');
+        users = JSON.parse(data || '[]'); // Assurez-vous que 'users' est un tableau
+    } else {
+        users = []; // Initialiser à un tableau vide si le fichier n'existe pas
     }
 };
 
@@ -92,13 +94,13 @@ app.post('/api/users', (req,res) => {
 
 // récupération des utilisateurs
 app.get('/api/users', (req,res) => {
-    res.json(users);
+    res.json(users); // récupérer les utilisateurs depuis le fichier
 });
 
 // récupération d'un utilisateur par son ID
 app.get('/api/users/:id', (req, res) => {
-    const { id } = req.params; // Assurez-vous d'extraire 'id'
-    const userFind = users.find(user => user.id === id); // Utiliser 'id' ici
+    const { id } = req.params; // extraction de l'id de la requête
+    const userFind = users.find(user => user.id === id); // user recherché
 
     if (!userFind) {
         return res.status(404).json({ message: "Utilisateur non trouvé" });
